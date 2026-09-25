@@ -1,0 +1,25 @@
+{
+	"name": "r-photo",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "A Photoshop-like image editor that runs in the browser (TypeScript, Fotox's interface, our own core)",
+	"license": "MIT",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint .",
+		"check": "npm run typecheck && npm run lint"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^26.6.3",
+		"eslint": "^10.11.0",
+		"globals": "^17.12.0",
+		"typescript": "^5.9.3",
+		"typescript-eslint": "^8.70.1",
+		"vite": "^8.3.1"
+	}
+}
