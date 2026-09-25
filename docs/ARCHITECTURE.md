@@ -1,4 +1,4 @@
-# Architecture — Fotox Web (first draft)
+# Architecture — R-photo (first draft)
 
 > **Draft, Claude, 26 Sep 2026.** It says how the pieces fit, so that W0 can
 > start. Details are decided in each milestone's T00 card.
@@ -121,6 +121,6 @@ src/tools/          one file per tool, registered (Lossy Layers' registry patter
 src/filters/        one file per filter, registered
 src/jobs/           job workers (filters, PSD, PatchMatch, AI)
 src/io/             file formats
-tests/              Vitest (headless: core, tools, filters), Playwright smoke tests
+tests/              (W12) Vitest for the core, Playwright for the interface
 docs/               this folder
 ```

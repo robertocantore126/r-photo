@@ -1,7 +1,7 @@
-# Fotox Web (working name)
+# R-photo
 
-A Photoshop-like image editor in TypeScript that runs in the browser, in the
-spirit of Photopea:
+A Photoshop-like image editor in TypeScript that runs in the browser (only),
+in the spirit of Photopea:
 - **Fotox's interface** (menus, panels, dialogs);
 - a **core of our own** running in a Web Worker, seeded with
   [BitMappery](https://github.com/igorski/bitmappery)'s model;
