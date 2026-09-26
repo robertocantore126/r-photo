@@ -119,7 +119,8 @@ Task cards: `docs/tasks/W0.md` … `W12.md` (drafts, 26 Sep 2026).
 
 Answered on 26 Sep 2026 (`docs/DECISIONS.md`): the name is **R-photo**
 (D-001), the app is **browser only** (D-002), and **tests come at the end**
-(D-003).
+(D-003). Questions 1, 3, 4, 6 and 7 were answered in W0-T00
+(D-004…D-008); question 5 is W1-T00 point 1.
 
 | # | Question | Recommendation |
 | --- | --- | --- |

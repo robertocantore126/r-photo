@@ -60,7 +60,7 @@ From `docs/ROADMAP.md` §3; the linter enforces 1 and 5.
 
 - New code is TypeScript. Fotox's interface (`ui/`) stays plain JavaScript for
   now: `allowJs` is on, `checkJs` is off, and a file moves to TypeScript when a
-  card touches it (ROADMAP §5 question 4).
+  card says so; a small fix to a `.js` file keeps it JavaScript (D-004).
 - No `any` without a comment saying why it is one; no `// @ts-ignore`
   (use `@ts-expect-error` with a reason, or fix the type). The linter warns on
   `any`.

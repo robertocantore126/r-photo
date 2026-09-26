@@ -14,7 +14,7 @@
 
 		/* Fotox's interface is plain JavaScript for now: it is *parsed* (so TS
 		   can import from it) but not checked. Each file moves to TypeScript
-		   when a card touches it (D-004, ROADMAP §5 question 4). */
+		   when a card says so (D-004, ROADMAP §5 question 4). */
 		"allowJs": true,
 		"checkJs": false,
 
