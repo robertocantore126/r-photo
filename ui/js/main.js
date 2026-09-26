@@ -191,7 +191,7 @@ function refreshSwatches() {
 /* ---------------------------------------------------------------- avvio */
 
 async function boot() {
-  // First, so `body.native` is set before any part of the chrome is built.
+  // First, so `body.engine` is set before any part of the chrome is built.
   bridge.init();
   await loadSprite();
 

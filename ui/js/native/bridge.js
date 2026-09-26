@@ -1,11 +1,12 @@
-// Fotox — the bridge between the UI and the native shell/engine.
+// Fotox — the bridge between the UI and the engine.
 //
-// In a plain browser, messages go to ./mock-engine.js instead.
-//
-// Inside the app, the vendored Graphite shell injects `window.sendNativeMessage`
-// and `window.initializeNativeCommunication` before any script runs
-// (docs/GRAPHITE.md §1), so their presence is what "native mode" means. In a
-// plain browser neither exists; the UI must keep working there.
+// Two transports (W0-T03):
+//   - the engine worker (src/engine/worker.ts), the default: messages are
+//     posted to it, and its replies come back through `receive`;
+//   - the mock engine (./mock-engine.js), with `?mock` in the URL: the
+//     interface alone, as Fotox runs in a plain browser.
+// Fotox's third, the CEF shell (`window.sendNativeMessage`, binary frames), is
+// gone: R-photo runs in the browser only (D-002).
 //
 // Usage:
 //   import * as bridge from "./native/bridge.js";
@@ -13,52 +14,54 @@
 //   bridge.send({ type: "hello", ui_version: "…" });
 //   bridge.on("toast", (msg, payload) => …);
 
-import { encodeJson, encodeBinary, decode } from "./protocol.js";
 import * as mockEngine from "./mock-engine.js";
 
-/** True inside the Fotox app, false in a plain browser. */
-export const isNative = typeof window.sendNativeMessage === "function";
+const useMock = new URLSearchParams(location.search).has("mock");
+
+/**
+ * True when a real engine answers (the worker), false with `?mock`.
+ *
+ * The name is Fotox's, where it meant "inside the app": the interface checks
+ * it wherever the engine, not the interface, owns something (the documents,
+ * the view, the Layers and History panels). That is exactly what the worker
+ * is, so the ~40 call sites keep their meaning without being touched.
+ */
+export const isNative = !useMock;
 
 const listeners = new Map(); // message type → Set of callbacks
 let started = false;
+let worker = null;
 
 /**
- * Start the bridge. In native mode: mark `<body class="native">`, install the
- * receiver, then tell the shell it may start delivering messages (it queues
- * them until this call). Safe to call more than once.
+ * Start the bridge: mark `<body class="engine">` (the viewport's layout) and
+ * start the engine worker, unless `?mock`. Safe to call more than once.
  */
 export function init() {
   if (started) return;
   started = true;
   if (!isNative) return;
-  document.body.classList.add("native");
-  window.receiveNativeMessage = receive;
-  window.initializeNativeCommunication();
+  document.body.classList.add("engine");
+  worker = new Worker(new URL("../../../src/engine/worker.ts", import.meta.url), { type: "module", name: "r-photo engine" });
+  worker.addEventListener("message", (event) => receive(event.data));
+  worker.addEventListener("error", (event) => {
+    console.error("r-photo bridge: the engine worker failed:", event.message || event);
+  });
 }
 
-/** Send a JSON message (an object with a `type` field). */
-export function send(message) {
-  if (isNative) {
-    window.sendNativeMessage(encodeJson(message));
+/**
+ * Send a message (an object with a `type` field) to the engine. `transfer`
+ * lists buffers or canvases to hand over instead of copying (W0-T04's
+ * viewport canvas, W0-T07's files).
+ */
+export function send(message, transfer = []) {
+  if (worker) {
+    worker.postMessage(message, transfer);
     return;
   }
-  // Browser mode: the mock engine answers. Replies go through the same
-  // encode → decode path as native ones, asynchronously like the real thing.
+  // Mock: replies go through the same `receive` path, asynchronously like the
+  // real thing.
   for (const reply of mockEngine.handle(message)) {
-    const frame = encodeJson(reply);
-    setTimeout(() => receive(frame), 0);
-  }
-}
-
-/** Send a JSON header followed by raw bytes. */
-export function sendBinary(header, bytes) {
-  if (isNative) {
-    window.sendNativeMessage(encodeBinary(header, bytes));
-    return;
-  }
-  for (const reply of mockEngine.handle(header)) {
-    const frame = encodeJson(reply);
-    setTimeout(() => receive(frame), 0);
+    setTimeout(() => receive({ message: reply }), 0);
   }
 }
 
@@ -72,18 +75,19 @@ export function on(type, fn) {
   return () => listeners.get(type).delete(fn);
 }
 
-function receive(buffer) {
-  let frame;
-  try {
-    frame = decode(buffer);
-  } catch (error) {
-    console.error("fotox bridge: dropping a malformed message:", error);
+// One frame from the engine: `{ message, payload? }` (src/engine/protocol.ts,
+// `EngineFrame`). `payload` is a Uint8Array for the messages that carry pixels.
+function receive(frame) {
+  const message = frame && frame.message;
+  if (!message || typeof message.type !== "string") {
+    console.error("r-photo bridge: dropping a malformed message:", frame);
     return;
   }
-  const handlers = listeners.get(frame.message.type);
+  const handlers = listeners.get(message.type);
   if (!handlers || handlers.size === 0) {
-    console.warn(`fotox bridge: no handler for "${frame.message.type}"`);
+    console.warn(`r-photo bridge: no handler for "${message.type}"`);
     return;
   }
-  for (const fn of handlers) fn(frame.message, frame.payload);
+  const payload = frame.payload || new Uint8Array(0);
+  for (const fn of handlers) fn(message, payload);
 }

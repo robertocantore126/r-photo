@@ -4,13 +4,7 @@
 // answers the way the real engine will for things it does not implement, so
 // browser mode exercises the same message paths as the app.
 
-import { UI, ENGINE } from "./protocol.js";
-
-// Action ids the UI handles entirely by itself (panels, tools, view flags,
-// screen modes, dialogs, zoom, workspaces). The engine has nothing to say
-// about them, so the mock stays quiet instead of toasting on every click.
-// Mirror of `fx_protocol::UI_LOCAL_ACTION_PREFIXES`.
-const UI_LOCAL_PREFIXES = ["panel:", "panels:", "tool:", "toggle:", "screen:", "dlg:", "zoom:", "ws:", "par:", "debug:"];
+import { UI, ENGINE, isUiLocalAction } from "./protocol.js";
 
 /** Answer one UI → engine message; returns the replies (possibly none). */
 export function handle(message) {
@@ -24,7 +18,9 @@ export function handle(message) {
       if (message.id === "debug:pick-color") {
         return [{ type: ENGINE.COLOR_PICKED, rgba: [65535, 0, 0, 65535], target: "fg" }];
       }
-      if (UI_LOCAL_PREFIXES.some((p) => message.id.startsWith(p))) return [];
+      // Action ids the UI handles by itself (panels, tools, view flags…): the
+      // same list the engine reads (src/engine/protocol.ts).
+      if (isUiLocalAction(message.id)) return [];
       return [{ type: ENGINE.TOAST, text: `${message.id}: not implemented (mock engine)` }];
     case UI.TOOL_OPTIONS:
     case UI.SET_COLORS:

@@ -15,8 +15,9 @@ is the current one.
 
 | Card | State | Branch | Pull request | Report |
 | --- | --- | --- | --- | --- |
-| W0-T01 | done before tonight (earlier session); PR opened tonight so the stack can be merged in order | `task/W0-T01-repository` | see GitHub | `docs/reports/W0-T01.md` |
-| W0-T02 | **done** | `task/W0-T02-interface` | see GitHub | `docs/reports/W0-T02.md` |
+| W0-T01 | done before tonight (earlier session); PR opened tonight so the stack can be merged in order | `task/W0-T01-repository` | [#1](https://github.com/robertocantore126/r-photo/pull/1) | `docs/reports/W0-T01.md` |
+| W0-T02 | **done** | `task/W0-T02-interface` | [#2](https://github.com/robertocantore126/r-photo/pull/2) | `docs/reports/W0-T02.md` |
+| W0-T03 | **done** | `task/W0-T03-worker` | see GitHub | `docs/reports/W0-T03.md` |
 
 ## What limited the checks
 
