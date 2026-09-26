@@ -110,3 +110,27 @@ export function isEmpty(rect: Rect): boolean {
 export function isWholeRect(rect: Rect): boolean {
 	return [rect.x, rect.y, rect.width, rect.height].every(Number.isInteger) && rect.width >= 0 && rect.height >= 0;
 }
+
+/**
+ * True when every pixel of an `rgba8` surface is opaque (a `gray8` surface
+ * always is). Reads region by region, so it works on any implementation.
+ */
+export function isOpaque(surface: Surface): boolean {
+	if (surface.format !== "rgba8") {
+		return true;
+	}
+	for (const region of surface.regions()) {
+		// Band by band: a whole 4000 × 3000 region would be one 48 MB copy.
+		const band = Math.max(1, Math.floor(4_000_000 / Math.max(1, region.width)));
+		for (let y = region.y; y < region.y + region.height; y += band) {
+			const rect = { x: region.x, y, width: region.width, height: Math.min(band, region.y + region.height - y) };
+			const data = surface.read(rect).data;
+			for (let i = 3; i < data.length; i += 4) {
+				if (data[i] !== 255) {
+					return false;
+				}
+			}
+		}
+	}
+	return true;
+}

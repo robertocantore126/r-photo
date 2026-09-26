@@ -239,7 +239,9 @@ async function boot() {
   // A control that is an action rather than a value (M6-T03: the crop tool's
   // ✓ and ✗) takes the same path as a menu item or a shortcut.
   on("action", (id) => runAction({ label: id, a: id }));
-  on("ask-dialog", (id) => openDialog(id));
+  // Through runAction, so a dialog the engine makes live (the tab bar's "+"
+  // is File ▸ New) opens the same way as from the menu.
+  on("ask-dialog", (id) => runAction({ label: id, a: "dlg:" + id }));
   on("panel:open", (id) => focusPanel(id));
   on("zoom:set", (z) => zoomTo(z));
   on("flag", (key) => {

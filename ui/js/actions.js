@@ -11,10 +11,9 @@ import { dockGroups } from "./data/panels.js";
 import * as bridge from "./native/bridge.js";
 import { UI } from "./native/protocol.js";
 import { isEngineFilter, openFilterDialog } from "./native/filters.js";
-import { cmykProfiles, isColorDialog, openColorDialog } from "./native/color.js";
+import { isColorDialog, openColorDialog } from "./native/color.js";
 import { isImageDialog, openImageDialog } from "./native/image.js";
-import { activeDocument } from "./native/documents.js";
-import { dialogDef } from "./data/dialogs.js";
+import { activeDocument, openNewDocumentDialog, openFilesDialog, openExportDialog, exportDocument } from "./native/documents.js";
 
 export function runAction(item) {
   const a = item && item.a ? item.a : "";
@@ -73,27 +72,9 @@ export function runAction(item) {
   if (bridge.isNative && (a.startsWith("clip:") || a.startsWith("edit:fill") || a === "mask:reveal-sel" || a === "mask:hide-sel")) return;
   // In the app, Export As collects the options, then the shell shows the save
   // dialog for the chosen format and the engine exports (M3-T07).
-  if (a === "dlg:export-as" && bridge.isNative) {
-    // The CMYK menu lists the profiles the engine found (M4-T04).
-    const cmyk = cmykProfiles();
-    const withCmyk = (fields) => fields.map((f) => (f.fields ? { ...f, fields: withCmyk(f.fields) } : f.label === "CMYK:" ? { ...f, options: ["None", ...cmyk.map((p) => p.name)] } : f));
-    openDialog("export-as", {
-      fields: withCmyk(dialogDef("export-as").fields || []),
-      onOk: (v) => bridge.send({
-        type: UI.ACTION, id: "export:as",
-        args: {
-          // CMYK is written as TIFF.
-          format: (cmyk.find((p) => p.name === v["CMYK:"]) ? "tif" : { JPG: "jpg", TIFF: "tif" }[v["Format:"]]) || "png",
-          cmyk: (cmyk.find((p) => p.name === v["CMYK:"]) || {}).path || "",
-          eight_bit: v["Bit Depth:"] === "8 bits/channel",
-          transparency: { On: "on", Off: "off" }[v["Transparency:"]] || "auto",
-          quality: v["Quality:"],
-          chroma: String(v["Chroma:"]).startsWith("4:2:0") ? "420" : "444",
-        },
-      }),
-    });
-    return;
-  }
+  // With the engine, File ▸ New, Open and Export are live (W0-T07).
+  if (a === "dlg:new-doc" && bridge.isNative) { openNewDocumentDialog(); return; }
+  if (a === "dlg:export-as" && bridge.isNative) { openExportDialog(label); return; }
   // In the app, Image ▸ Trim (M6-T03) looks at the layer's pixels in the
   // engine: the dialog's choices travel with the action.
   if (a === "dlg:trim" && bridge.isNative) {
@@ -114,8 +95,8 @@ export function runAction(item) {
   // In the app, Gaussian Blur and Unsharp Mask preview live and apply as a
   // job in the engine (M4-T05).
   if (a.startsWith("dlg:") && bridge.isNative && isEngineFilter(a.slice(4))) { openFilterDialog(a.slice(4)); return; }
-  // In the app, Open is the native file dialog (the shell shows it).
-  if (a === "dlg:open" && bridge.isNative) { status(label); return; }
+  // With the engine, Open is the browser's file picker (W0-T07).
+  if (a === "dlg:open" && bridge.isNative) { openFilesDialog(); return; }
   if (a.startsWith("dlg:")) { openDialog(a.slice(4)); status(label); return; }
 
   // pannelli -------------------------------------------------------------
@@ -189,8 +170,8 @@ export function runAction(item) {
   if ((a === "doc:save" || a === "doc:save-as") && bridge.isNative) { status(label); return; }
   if (a.startsWith("doc:save")) { openDialog("export-as"); return; }
   if (a === "doc:revert") { toast("Reverted to the last saved state (mock)"); return; }
-  // In the app, PNG and TIFF export are real: the shell shows the save dialog.
-  if ((a === "export:png" || a === "export:tiff" || a === "export:jpg") && bridge.isNative) { status(label); return; }
+  // With the engine, File ▸ Export as ▸ PNG / JPG / WebP export at once (W0-T07).
+  if ((a === "export:png" || a === "export:jpg" || a === "export:webp") && bridge.isNative) { exportDocument(a.slice(7)); return; }
   if (a.startsWith("export:")) { openDialog("export-as"); return; }
 
   // IA, estensioni, account ---------------------------------------------

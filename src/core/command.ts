@@ -26,8 +26,13 @@ export type Rgba16 = [number, number, number, number];
 /** Layer ▸ New ▸ Layer: an empty pixel layer, above the active one, which it becomes. */
 export interface AddLayerCommand {
 	op: "add_layer";
-	/** Photoshop's default is "Layer N", the next free number. */
-	name?: string;
+	/**
+	 * What kind of layer, as Fotox's Layers panel sends it: `"pixel"` (or
+	 * absent). Groups, fill and adjustment layers arrive in W1.
+	 */
+	layer?: "pixel";
+	/** Photoshop's default is "Layer N", the next free number; `null` (the panel's) means the default. */
+	name?: string | null;
 }
 
 /** Layer ▸ Delete ▸ Layer. */
@@ -88,8 +93,14 @@ export function parseCommand(value: unknown): Command | string {
 	}
 	const hasLayer = typeof command.layer === "object" && command.layer !== null && Number.isInteger((command.layer as { id?: unknown }).id);
 	switch (command.op) {
-		case "add_layer":
+		case "add_layer": {
+			const kind = (value as { layer?: unknown }).layer;
+			if (kind !== undefined && kind !== "pixel") {
+				// A group, fill or adjustment layer: W1-T01, W1-T08, W4.
+				return "add_layer: not implemented yet for this kind of layer";
+			}
 			return value as AddLayerCommand;
+		}
 		case "delete_layer":
 		case "fill_layer":
 			return hasLayer ? (value as Command) : "The command names no layer.";
@@ -97,7 +108,17 @@ export function parseCommand(value: unknown): Command | string {
 			if (!hasLayer) {
 				return "The command names no layer.";
 			}
-			return typeof command.props === "object" && command.props !== null ? (value as SetLayerPropsCommand) : "The command changes nothing.";
+			if (typeof command.props !== "object" || command.props === null) {
+				return "The command changes nothing.";
+			}
+			{
+				// Fill, blend, locks… are W1-T01's.
+				const later = Object.keys(command.props).filter((key) => !["visible", "opacity", "name"].includes(key));
+				if (later.length > 0) {
+					return `set_layer_props (${later.join(", ")}): not implemented yet`;
+				}
+			}
+			return value as SetLayerPropsCommand;
 	}
 }
 
@@ -114,6 +135,11 @@ export interface Effect {
 	propsChanged: boolean;
 	/** Layers were added, removed or moved. */
 	structureChanged: boolean;
+	/**
+	 * The command changed nothing (a property set to the value it had): the
+	 * history does not record it, as Photoshop does not.
+	 */
+	unchanged?: boolean;
 }
 
 /** The outcome of {@link apply}: the effect, or why nothing was done. */
@@ -155,7 +181,7 @@ export function apply(doc: Document, command: Command, context: ApplyContext): O
 export function validate(doc: Document, command: Command): string | null {
 	switch (command.op) {
 		case "add_layer":
-			if (command.name !== undefined && typeof command.name !== "string") {
+			if (command.name !== undefined && command.name !== null && typeof command.name !== "string") {
 				return "The layer's name must be text.";
 			}
 			return null;
@@ -266,6 +292,11 @@ function deleteLayer(doc: Document, command: DeleteLayerCommand): Effect {
 function setLayerProps(doc: Document, command: SetLayerPropsCommand): Effect {
 	const place = findLayer(doc, command.layer.id);
 	const { visible, opacity, name } = command.props;
+	const unchanged = !place || (
+		(visible === undefined || visible === place.layer.visible) &&
+		(opacity === undefined || opacity === place.layer.opacity) &&
+		(name === undefined || name === place.layer.name)
+	);
 	if (place) {
 		if (visible !== undefined) {
 			place.layer.visible = visible;
@@ -285,7 +316,7 @@ function setLayerProps(doc: Document, command: SetLayerPropsCommand): Effect {
 		: visible !== undefined ? "Layer Visibility"
 		: opacity !== undefined ? "Opacity Change"
 		: "Rename Layer";
-	return { label, pixelsChanged: [], propsChanged: true, structureChanged: false };
+	return { label, pixelsChanged: [], propsChanged: !unchanged, structureChanged: false, unchanged };
 }
 
 function fillLayer(doc: Document, command: FillLayerCommand): Effect {

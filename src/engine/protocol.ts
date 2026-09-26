@@ -42,6 +42,8 @@ export const UI = Object.freeze({
 	VIEWPORT_RESIZED: "viewport_resized",
 	POINTER: "pointer",
 	WHEEL: "wheel",
+	// W0-T07: files picked in the Open dialog or dropped on the window.
+	OPEN_FILES: "open_files",
 } as const);
 
 /** Engine → UI message type names (Fotox's `EngineToUi`). */
@@ -65,6 +67,9 @@ export const ENGINE = Object.freeze({
 	ERROR: "error",
 	COLOR_PICKED: "color_picked",
 	THUMBNAIL: "thumbnail",
+	// R-photo's own (W0-T07): an encoded file for the interface to save,
+	// because the File System Access API and downloads live on the page.
+	SAVE_FILE: "save_file",
 } as const);
 
 /**
@@ -304,6 +309,15 @@ export interface WheelMessage {
 	modifiers: Modifiers;
 }
 
+/**
+ * Files to open (File ▸ Open, or dropped on the window), structured-cloned
+ * to the worker. One document per file.
+ */
+export interface OpenFilesMessage {
+	type: typeof UI.OPEN_FILES;
+	files: File[];
+}
+
 /** Everything the interface sends the engine. */
 export type UiToEngine =
 	| HelloMessage
@@ -326,7 +340,8 @@ export type UiToEngine =
 	| ViewportCanvasMessage
 	| ViewportResizedMessage
 	| PointerMessage
-	| WheelMessage;
+	| WheelMessage
+	| OpenFilesMessage;
 
 /* ------------------------------------------------------------ engine → UI */
 
@@ -419,6 +434,8 @@ export interface LayerInfo {
 	visible: boolean;
 	/** 0‥1. */
 	opacity: number;
+	/** 0‥1: the Fill field (the content only). */
+	fill: number;
 	blend: string;
 	selected: boolean;
 	clipped: boolean;
@@ -530,6 +547,19 @@ export interface ThumbnailMessage {
 	height: number;
 }
 
+/**
+ * An encoded file the interface saves: to the file handle it asked for with
+ * `request` (File System Access API), or as a download. `name` is the
+ * suggested file name.
+ */
+export interface SaveFileMessage {
+	type: typeof ENGINE.SAVE_FILE;
+	request: number;
+	name: string;
+	mime: string;
+	blob: Blob;
+}
+
 /** Everything the engine sends the interface. */
 export type EngineToUi =
 	| DocumentOpenedMessage
@@ -550,7 +580,8 @@ export type EngineToUi =
 	| ToastMessage
 	| ErrorMessage
 	| ColorPickedMessage
-	| ThumbnailMessage;
+	| ThumbnailMessage
+	| SaveFileMessage;
 
 /**
  * What the worker posts: a message, and for the messages that carry pixels
