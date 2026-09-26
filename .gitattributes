@@ -1,0 +1,16 @@
+# Same policy as Fotox: text files are LF in the repository and in the working
+# tree (core.autocrlf would otherwise rewrite them on Windows), Windows scripts
+# keep CRLF, and the binary formats are left alone.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.psd binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

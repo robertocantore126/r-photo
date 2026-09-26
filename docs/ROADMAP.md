@@ -87,18 +87,18 @@ in the browser. Sizes: a "card" is 0.5–2 days of agent work.
 | **W2** | Selections and painting | • Move, Marquee, Lasso, Magic Wand, Eyedropper;<br>• Brush / Pencil / Eraser with pen pressure (Klecks' engine);<br>• Paint Bucket, Gradient;<br>• clipboard and drag-and-drop as layers;<br>• Free Transform, Crop, Image / Canvas Size | 12 |
 | **W3** | PSD | Open and save PSD / PSB with layers, groups, masks, blend modes, text as pixels, adjustment layers where supported (ag-psd) | 6 |
 | **W4** | Adjustments and filters | • the 16 adjustments as adjustment layers and as Image ▸ Adjustments;<br>• filters with live preview in workers (Blur family, Sharpen, Noise, Stylize, Distort, Render, Other);<br>• Fade | 10 |
-| **W5** | Type, shapes and paths | Type tool (horizontal / vertical, character and paragraph panels), shape layers, Pen tools, Paths panel, vector masks | 10 |
+| **W5** | Type, shapes and paths | Type tool (horizontal / vertical, character and paragraph panels), shape layers, Pen tools, Paths panel, vector masks | 9 |
 | **W6** | Retouching tools | Clone / Pattern Stamp, Healing / Spot Healing / Patch, Dodge / Burn / Sponge, Blur / Sharpen / Smudge, History Brush, Color Replacement, Red Eye, Background / Magic Eraser, Mixer Brush, brush presets and ABR import | 11 |
 | **W7** | Channels and selections | Channels panel, Quick Mask, Save / Load Selection, Color Range, Grow / Similar, Transform Selection, Select and Mask, Quick Selection, Magnetic Lasso, Perspective Crop, measurement tools | 10 |
 | **W8** | Styles and Smart Objects | The ten layer styles and Blend If, Smart Objects and Smart Filters, Layer Comps, Artboards, Slices | 9 |
-| **W9** | Content-aware and AI | • Content-Aware Fill / Move / Scale (PatchMatch in a worker / WebAssembly);<br>• Liquify, Puppet Warp, Perspective Warp, Vanishing Point;<br>• Select Subject, Remove Background, Object Selection (onnxruntime-web on WebGPU);<br>• Generative Fill through a local ComfyUI | 12 |
+| **W9** | Content-aware and AI | • Content-Aware Fill / Move / Scale (PatchMatch in a worker / WebAssembly);<br>• Liquify, Puppet Warp, Perspective Warp, Vanishing Point;<br>• Select Subject, Remove Background, Object Selection (onnxruntime-web on WebGPU);<br>• Generative Fill through a local ComfyUI | 14 |
 | **W10** | Scale | Surfaces become tiles (256²), 16-bit and 32-bit float, out-of-core storage in the browser (OPFS), WebGPU compositing on the visible tiles only, lazy open of big TIFF / PSB | 9 |
 | **W11** | Automation and plugins | Actions (record / replay the commands), batch processing on a folder (File System Access API), scripting, a plugin interface (WebAssembly and JS modules) | 7 |
 | **W12** | Tests | The test suite written at the end (D-003):<br>• unit tests of the core (Vitest, headless);<br>• the Photoshop comparison on PSD files (every `VERIFY`);<br>• Playwright smoke tests of the interface;<br>• performance measurements | 8 |
 
-`docs/tasks/COVERAGE.md` (to be copied from Fotox's plan branch and
-renumbered) maps every Photoshop tool and feature Rob listed on 26 Sep 2026
-to these milestones.
+Task cards: `docs/tasks/W0.md` … `W12.md` (drafts, 26 Sep 2026).
+`docs/tasks/COVERAGE.md` maps every Photoshop tool and feature Rob listed on
+26 Sep 2026 to the card that builds it.
 
 ### Why this order
 
@@ -126,7 +126,7 @@ Answered on 26 Sep 2026 (`docs/DECISIONS.md`): the name is **R-photo**
 | 1 | The GitHub repository: public or private? | **Private** until there is something to show |
 | 3 | Pixel depth in W0–W9 | **8-bit** (what Canvas2D and BitMappery give), with the Surface interface ready for 16-bit in W10 |
 | 4 | Keep the interface in plain JS, or move it to TypeScript? | **Move it gradually**: new code in TS, old files converted when touched |
-| 5 | Compositing in W0–W9 | **Our own compositor** in the worker: Canvas2D where its composite operations match Photoshop's formulas, our code (ported from Fotox's formulas) for the others. WebGPU arrives in W10 |
+| 5 | Compositing | **Revised in W1-T00: WebGPU from W1**, porting Fotox's `composite.wgsl` (all 27 modes, groups, masks, clipping). Canvas2D matches only some modes, and two of those not exactly. W10 then moves the same compositor to tiles |
 | 6 | Project file format | A **zip**: `document.json` (layers, commands' parameters) + one PNG per surface. Simple, inspectable, and it becomes tile-based in W10 |
 | 7 | Fotox (Rust) | **Paused** after M6 is merged. Its documents (architecture, protocol, blend modes, coverage, M7–M13 plans) are the reference for this project |
 

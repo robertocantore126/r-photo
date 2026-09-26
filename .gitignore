@@ -1,0 +1,22 @@
+# Build output (`npm run build`)
+dist/
+
+# Dependencies
+node_modules/
+
+# Vite and tooling caches
+.vite/
+*.tsbuildinfo
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local scratch (never committed)
+*.local
+scratch/

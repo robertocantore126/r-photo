@@ -97,8 +97,11 @@ Photoshop's:
   - the 27 blend modes by Fotox's formulas (`fotox/docs/BLEND_MODES.md`).
 - A cache of the flattened layers below the one being edited (Fotox's "hot
   layer", M2-T05) keeps painting fast on deep stacks.
-- W10 replaces this with WebGPU on tiles. The WGSL shaders in
-  `fotox/crates/fx-render/src/gpu/*.wgsl` are the starting point.
+- It is a **WebGPU compositor from W1** if W1-T00 agrees, porting the WGSL
+  shaders in `fotox/crates/fx-render/src/gpu/*.wgsl`. Surfaces stay on the CPU
+  and are uploaded as textures when they change.
+- W10 moves the same compositor to tiles (an atlas of the visible tiles at the
+  view's level).
 
 ## 6. Files
 

@@ -1,0 +1,39 @@
+{
+	"compilerOptions": {
+		/* Language and environment. `lib` is the interface's: the engine worker's
+		   globals come from `/// <reference lib="webworker" />` where they are
+		   used, because DOM and WebWorker cannot both be in `lib` (duplicate
+		   declarations). */
+		"target": "ES2023",
+		"lib": ["ES2023", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"types": ["node"],
+		"useDefineForClassFields": true,
+
+		/* Fotox's interface is plain JavaScript for now: it is *parsed* (so TS
+		   can import from it) but not checked. Each file moves to TypeScript
+		   when a card touches it (D-004, ROADMAP §5 question 4). */
+		"allowJs": true,
+		"checkJs": false,
+
+		/* The strict set the card asks for, plus the cheap extras. */
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"resolveJsonModule": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"noEmit": true
+	},
+	"include": ["src", "ui", "vite.config.ts"],
+	"exclude": ["dist", "node_modules"]
+}
