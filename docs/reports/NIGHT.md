@@ -19,7 +19,8 @@ is the current one.
 | W0-T02 | **done** | `task/W0-T02-interface` | [#2](https://github.com/robertocantore126/r-photo/pull/2) | `docs/reports/W0-T02.md` |
 | W0-T03 | **done** | `task/W0-T03-worker` | [#3](https://github.com/robertocantore126/r-photo/pull/3) | `docs/reports/W0-T03.md` |
 | W0-T04 | **done** | `task/W0-T04-viewport` | [#4](https://github.com/robertocantore126/r-photo/pull/4) | `docs/reports/W0-T04.md` |
-| W0-T05 | **done** | `task/W0-T05-core` | see GitHub | `docs/reports/W0-T05.md` |
+| W0-T05 | **done** | `task/W0-T05-core` | [#5](https://github.com/robertocantore126/r-photo/pull/5) | `docs/reports/W0-T05.md` |
+| W0-T06 | **done** | `task/W0-T06-compositor` | see GitHub | `docs/reports/W0-T06.md` |
 
 ## What limited the checks
 
