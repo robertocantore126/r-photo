@@ -186,3 +186,72 @@ export class Viewport implements ViewportTarget {
 		this.context.fillRect(x, y, width, height);
 	}
 }
+
+/**
+ * A document-sized drawing target for File ▸ Export (W0-T07): the compositor
+ * draws into it at 100 %, exactly as into the viewport, and it encodes the
+ * result. The transparency grid is not drawn; transparent pixels stay
+ * transparent, or are flattened onto `matte`.
+ */
+export class ExportTarget implements ViewportTarget {
+	private readonly canvas: OffscreenCanvas;
+	private readonly context: OffscreenCanvasRenderingContext2D;
+	private readonly matte: string | null;
+
+	/** A `width × height` target; `matte` is the colour under transparent pixels, or `null`. */
+	constructor(width: number, height: number, matte: string | null) {
+		this.canvas = new OffscreenCanvas(width, height);
+		const context = this.canvas.getContext("2d");
+		if (!context) {
+			throw new Error("The browser gave no 2D context for the export.");
+		}
+		this.context = context;
+		this.matte = matte;
+	}
+
+	/** Width, pixels. */
+	get width(): number {
+		return this.canvas.width;
+	}
+
+	/** Height, pixels. */
+	get height(): number {
+		return this.canvas.height;
+	}
+
+	/** {@inheritDoc ViewportTarget.clear} */
+	clear(): void {
+		this.context.clearRect(0, 0, this.width, this.height);
+		if (this.matte) {
+			this.fillRect(0, 0, this.width, this.height, this.matte);
+		}
+	}
+
+	/** {@inheritDoc ViewportTarget.fillRect} */
+	fillRect(x: number, y: number, width: number, height: number, color: string): void {
+		this.context.fillStyle = color;
+		this.context.fillRect(x, y, width, height);
+	}
+
+	/** The grid is on screen only: an export has none. */
+	checkerboard(): void {
+		// Nothing to draw.
+	}
+
+	/** {@inheritDoc ViewportTarget.drawSurface} */
+	drawSurface(surface: Surface, source: Rect, target: Rect, opacity: number, smooth: boolean): void {
+		const image = drawableOf(surface);
+		if (!image || opacity <= 0) {
+			return;
+		}
+		this.context.globalAlpha = opacity;
+		this.context.imageSmoothingEnabled = smooth;
+		this.context.drawImage(image, source.x, source.y, source.width, source.height, target.x, target.y, target.width, target.height);
+		this.context.globalAlpha = 1;
+	}
+
+	/** Encode what was drawn. `quality` is 0‥1 (JPEG, WebP). */
+	encode(mime: string, quality: number): Promise<Blob> {
+		return this.canvas.convertToBlob({ type: mime, quality });
+	}
+}
