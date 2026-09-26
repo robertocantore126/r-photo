@@ -14,6 +14,17 @@
 /** Ask for `callback` on the next animation frame (the worker's `requestAnimationFrame`). */
 export type FrameScheduler = (callback: () => void) => void;
 
+import { drawableOf } from "../core/raster/canvas-surface";
+import type { Rect, Surface } from "../core/surface";
+
+/**
+ * Photoshop's transparency grid (Preferences ▸ Transparency & Gamut): the
+ * default "Light" colours and "Medium" size, in **screen** pixels, so the
+ * squares keep their size at every zoom. VERIFY (W12): the exact greys and
+ * size, and whether the size follows the display scale.
+ */
+const CHECKER = { size: 8, light: "#ffffff", dark: "#cccccc" } as const;
+
 /**
  * What the engine may do to the viewport while a frame is drawn. Device
  * pixels, origin at the viewport's top-left.
@@ -27,6 +38,17 @@ export interface ViewportTarget {
 	clear(): void;
 	/** Fill a rectangle with a CSS colour. */
 	fillRect(x: number, y: number, width: number, height: number, color: string): void;
+	/**
+	 * Paint Photoshop's transparency grid over `rect`, its squares aligned
+	 * to (`anchorX`, `anchorY`) so the grid moves with the document.
+	 */
+	checkerboard(rect: Rect, anchorX: number, anchorY: number): void;
+	/**
+	 * Draw the `source` region of a surface into the `target` rectangle,
+	 * Normal blend at `opacity` (0‥1). `smooth`: filtered scaling (below
+	 * 100 %) rather than nearest pixels.
+	 */
+	drawSurface(surface: Surface, source: Rect, target: Rect, opacity: number, smooth: boolean): void;
 }
 
 /** The viewport: its canvas, its size, and the frame loop. */
@@ -35,6 +57,7 @@ export class Viewport implements ViewportTarget {
 	private context: OffscreenCanvasRenderingContext2D | null = null;
 	private background = "#282828";
 	private scheduled = false;
+	private checker: CanvasPattern | null = null;
 	private readonly schedule: FrameScheduler;
 
 	/** Device pixels per CSS pixel. */
@@ -110,6 +133,48 @@ export class Viewport implements ViewportTarget {
 	/** {@inheritDoc ViewportTarget.clear} */
 	clear(): void {
 		this.fillRect(0, 0, this.width, this.height, this.background);
+	}
+
+	/** {@inheritDoc ViewportTarget.checkerboard} */
+	checkerboard(rect: Rect, anchorX: number, anchorY: number): void {
+		const context = this.context;
+		if (!context) {
+			return;
+		}
+		if (!this.checker) {
+			const size = CHECKER.size;
+			const tile = new OffscreenCanvas(size * 2, size * 2);
+			const t = tile.getContext("2d");
+			if (!t) {
+				return;
+			}
+			t.fillStyle = CHECKER.light;
+			t.fillRect(0, 0, size * 2, size * 2);
+			t.fillStyle = CHECKER.dark;
+			t.fillRect(size, 0, size, size);
+			t.fillRect(0, size, size, size);
+			this.checker = context.createPattern(tile, "repeat");
+		}
+		if (!this.checker) {
+			return;
+		}
+		this.checker.setTransform(new DOMMatrix([1, 0, 0, 1, anchorX, anchorY]));
+		context.fillStyle = this.checker;
+		context.fillRect(rect.x, rect.y, rect.width, rect.height);
+	}
+
+	/** {@inheritDoc ViewportTarget.drawSurface} */
+	drawSurface(surface: Surface, source: Rect, target: Rect, opacity: number, smooth: boolean): void {
+		const context = this.context;
+		const image = drawableOf(surface);
+		if (!context || !image || source.width <= 0 || source.height <= 0 || opacity <= 0) {
+			return;
+		}
+		context.globalAlpha = opacity;
+		context.imageSmoothingEnabled = smooth;
+		context.imageSmoothingQuality = "high";
+		context.drawImage(image, source.x, source.y, source.width, source.height, target.x, target.y, target.width, target.height);
+		context.globalAlpha = 1;
 	}
 
 	/** {@inheritDoc ViewportTarget.fillRect} */
