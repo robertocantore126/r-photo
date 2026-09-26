@@ -74,7 +74,7 @@ export function runAction(item) {
   // dialog for the chosen format and the engine exports (M3-T07).
   // With the engine, File ▸ New, Open and Export are live (W0-T07).
   if (a === "dlg:new-doc" && bridge.isNative) { openNewDocumentDialog(); return; }
-  if (a === "dlg:export-as" && bridge.isNative) { openExportDialog(); return; }
+  if (a === "dlg:export-as" && bridge.isNative) { openExportDialog(label); return; }
   // In the app, Image ▸ Trim (M6-T03) looks at the layer's pixels in the
   // engine: the dialog's choices travel with the action.
   if (a === "dlg:trim" && bridge.isNative) {

@@ -342,12 +342,16 @@ export async function exportDocument(format, quality = 90) {
   bridge.send({ type: UI.ACTION, id: "export:as", args: { format, quality, request } });
 }
 
-/** File ▸ Export ▸ Export As…: the format and the quality. */
-export function openExportDialog() {
+/**
+ * File ▸ Export As… and File ▸ Export as ▸ PNG… / JPG… / WebP…: the format
+ * (chosen from the menu item's `label` when it names one) and the quality.
+ */
+export function openExportDialog(label = "") {
   if (!activeDocumentInfo()) { toast("Open a document first"); return; }
+  const named = ["PNG", "JPG", "WebP"].find((f) => label.startsWith(f));
   openDialog("export-as", {
     fields: [{ type: "col", fields: [
-      { type: "select", label: "Format:", options: ["PNG", "JPG", "WebP"], value: "PNG" },
+      { type: "select", label: "Format:", options: ["PNG", "JPG", "WebP"], value: named || "PNG" },
       { type: "range", label: "Quality:", value: 90, min: 0, max: 100 },
     ] }],
     onOk: (v) => exportDocument({ JPG: "jpg", WebP: "webp" }[v["Format:"]] || "png", Number(v["Quality:"])),
