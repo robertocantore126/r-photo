@@ -12,6 +12,9 @@ import type { UiToEngine } from "./protocol";
 
 declare const self: DedicatedWorkerGlobalScope;
 
-const engine = new Engine((frame, transfer) => self.postMessage(frame, transfer ?? []));
+const engine = new Engine(
+	(frame, transfer) => self.postMessage(frame, transfer ?? []),
+	(callback) => self.requestAnimationFrame(callback),
+);
 
 self.addEventListener("message", (event: MessageEvent<UiToEngine>) => engine.handle(event.data));
