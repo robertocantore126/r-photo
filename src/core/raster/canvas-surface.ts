@@ -188,3 +188,24 @@ export const canvasSurfaces: SurfaceFactory = {
 export function drawableOf(surface: Surface): OffscreenCanvas | null {
 	return surface instanceof CanvasSurface ? surface.source : null;
 }
+
+/**
+ * A layer thumbnail for the Layers panel: the document's frame scaled so its
+ * long side is `size` pixels, with the layer's pixels drawn where they sit
+ * in it (Photoshop's thumbnails show the layer within the canvas bounds).
+ * Straight RGBA bytes.
+ */
+export function thumbnailOf(surface: Surface, offset: { x: number; y: number }, docWidth: number, docHeight: number, size: number): PixelBlock {
+	const scale = Math.min(1, size / Math.max(docWidth, docHeight));
+	const width = Math.max(1, Math.round(docWidth * scale));
+	const height = Math.max(1, Math.round(docHeight * scale));
+	const canvas = new OffscreenCanvas(width, height);
+	const context = canvas.getContext("2d");
+	const image = drawableOf(surface);
+	if (context && image) {
+		context.imageSmoothingQuality = "high";
+		context.drawImage(image, offset.x * scale, offset.y * scale, surface.width * scale, surface.height * scale);
+	}
+	const data = context ? context.getImageData(0, 0, width, height).data : new Uint8ClampedArray(width * height * 4);
+	return { width, height, format: "rgba8", data };
+}
