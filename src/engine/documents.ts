@@ -158,7 +158,7 @@ export class Documents {
 		if (typeof parsed === "string") {
 			// An op the engine does not know yet toasts, as Fotox did; a
 			// malformed one is an error.
-			this.host.send(parsed.endsWith("not implemented yet") ? { type: ENGINE.TOAST, text: parsed } : { type: ENGINE.ERROR, text: parsed });
+			this.host.send(parsed.includes("not implemented yet") ? { type: ENGINE.TOAST, text: parsed } : { type: ENGINE.ERROR, text: parsed });
 			return;
 		}
 		this.run(open, parsed);
@@ -169,6 +169,9 @@ export class Documents {
 		const outcome = apply(open.doc, command, { surfaces: this.host.surfaces });
 		if (!outcome.ok) {
 			this.error(outcome.error);
+			return;
+		}
+		if (outcome.effect.unchanged) {
 			return;
 		}
 		open.history.record(open.doc, outcome.effect.label);
