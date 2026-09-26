@@ -279,12 +279,6 @@ function initEngineViewport(viewport) {
   window.addEventListener("blur", () => { spaceHeld = false; cursor(); });
   on("tool", cursor);
   cursor();
-
-  // Temporary (W0-T04, until W0-T07 opens real documents): `?pattern` shows
-  // the engine's 4000 × 3000 test pattern, to try pan and zoom.
-  if (new URLSearchParams(location.search).has("pattern")) {
-    bridge.send({ type: UI.ACTION, id: "debug:test-pattern" });
-  }
 }
 
 /* ------------------------------------------------------------- disegno */
