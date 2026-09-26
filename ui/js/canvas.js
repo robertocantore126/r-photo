@@ -43,8 +43,8 @@ export function initWorkspace(host) {
   rulerLeft = h("canvas", { class: "ruler ruler-left", width: RULER, height: 600 });
 
   if (bridge.isNative) {
-    // Inside the app the document is drawn natively under a transparent hole
-    // (docs/ARCHITECTURE.md §2): no demo canvas, no DOM scrolling.
+    // With the engine, the document is drawn by the worker into #viewport's
+    // canvas (W0-T04): no demo canvas, no DOM scrolling.
     const viewport = h("div", { id: "viewport" });
     const gridLayer = h("div", { class: "grid-layer" });
     fpsOverlay = h("div", { class: "fps-overlay", hidden: true });
@@ -70,7 +70,7 @@ export function initWorkspace(host) {
       drawRulers();
     });
     requestAnimationFrame(() => { applyRulers(); applyGrid(); });
-    reportViewportBounds(viewport);
+    initEngineViewport(viewport);
     return { setZoom: zoomTo, zoomIn, zoomOut, fit, actual };
   }
 
@@ -151,39 +151,140 @@ function showStatus(s) {
   }
 }
 
-/* ------------------------------------------------------- native viewport */
+/* ------------------------------------------------------- engine viewport */
 
-// Tell the shell where the viewport hole is, in physical window pixels
-// (`viewport_bounds`, docs/PROTOCOL.md §4). The hole moves or resizes when the
-// window resizes, the dock is dragged, rulers/tabs are toggled or the screen
-// mode changes; every one of those resizes #viewport or one of the boxes
-// around it, so observing them all catches every layout change. Unchanged
-// rectangles are not re-sent.
-function reportViewportBounds(viewport) {
-  let last = "";
-  const sendBounds = () => {
-    const rect = viewport.getBoundingClientRect();
+// The viewport's <canvas> belongs to the engine worker (W0-T04,
+// docs/ARCHITECTURE.md §2): it is transferred once, then the page only
+// reports its size and forwards the pointer and the wheel. Sizes and
+// coordinates are in device pixels, so the canvas stays sharp at 125 / 150 %
+// Windows scaling.
+
+let spaceHeld = false;
+
+/** Keys held with a pointer or wheel event (src/engine/protocol.ts, `Modifiers`). */
+function modifiersOf(e) {
+  return { shift: e.shiftKey, ctrl: e.ctrlKey, alt: e.altKey, meta: e.metaKey, space: spaceHeld };
+}
+
+function initEngineViewport(viewport) {
+  const canvas = h("canvas", { class: "viewport-canvas" });
+  viewport.append(canvas);
+
+  // Size in device pixels: the CSS size × the ratio, or the exact figure the
+  // browser reports (devicePixelContentBoxSize) when it agrees to within a
+  // rounding. Emulated scales (DevTools) report CSS pixels there, so a figure
+  // that disagrees is not trusted.
+  const deviceSize = (entry) => {
     const dpr = window.devicePixelRatio || 1;
-    const bounds = { x: rect.left * dpr, y: rect.top * dpr, width: rect.width * dpr, height: rect.height * dpr };
-    const key = `${bounds.x},${bounds.y},${bounds.width},${bounds.height}`;
-    if (key === last) return;
-    last = key;
-    bridge.send({ type: UI.VIEWPORT_BOUNDS, ...bounds });
+    const rect = viewport.getBoundingClientRect();
+    const width = Math.round(rect.width * dpr);
+    const height = Math.round(rect.height * dpr);
+    const box = entry && entry.devicePixelContentBoxSize && entry.devicePixelContentBoxSize[0];
+    if (box && Math.abs(box.inlineSize - width) <= 1 && Math.abs(box.blockSize - height) <= 1) {
+      return { width: box.inlineSize, height: box.blockSize, dpr };
+    }
+    return { width, height, dpr };
+  };
+
+  const first = deviceSize(null);
+  const offscreen = canvas.transferControlToOffscreen();
+  const background = getComputedStyle(document.querySelector(".workspace") || document.body).backgroundColor;
+  bridge.send({ type: UI.VIEWPORT_CANVAS, canvas: offscreen, ...first, background }, [offscreen]);
+
+  let last = `${first.width}x${first.height}@${first.dpr}`;
+  const report = (entry) => {
+    const size = deviceSize(entry);
+    const key = `${size.width}x${size.height}@${size.dpr}`;
+    if (key !== last) {
+      last = key;
+      bridge.send({ type: UI.VIEWPORT_RESIZED, ...size });
+    }
     drawRulers();
   };
-  const observer = new ResizeObserver(sendBounds);
-  for (const el of [viewport, document.getElementById("app"), document.querySelector(".workspace"), document.querySelector(".middle")]) {
-    if (el) observer.observe(el);
+  const observer = new ResizeObserver((entries) => report(entries[entries.length - 1]));
+  try {
+    observer.observe(viewport, { box: "device-pixel-content-box" });
+  } catch {
+    observer.observe(viewport);
   }
-  window.addEventListener("resize", sendBounds);
-  // Moving to a monitor with another scale changes the physical rectangle
-  // without changing the CSS one, so no observer above fires.
+  // Moving to a monitor with another scale changes the device size without
+  // changing the CSS one, so the observer above may not fire.
   const watchScale = () => {
     matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-      .addEventListener("change", () => { sendBounds(); watchScale(); }, { once: true });
+      .addEventListener("change", () => { report(null); watchScale(); }, { once: true });
   };
   watchScale();
-  sendBounds();
+
+  // Pointer Events → `pointer`. Coordinates from the viewport's corner.
+  const pointer = (kind, e) => {
+    const rect = viewport.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    bridge.send({
+      type: UI.POINTER, kind,
+      x: (e.clientX - rect.left) * dpr, y: (e.clientY - rect.top) * dpr,
+      pressure: e.pressure, tilt_x: e.tiltX || 0, tilt_y: e.tiltY || 0,
+      button: e.button, buttons: e.buttons, pointer_type: e.pointerType,
+      modifiers: modifiersOf(e), time: e.timeStamp,
+    });
+  };
+  viewport.addEventListener("pointerdown", (e) => {
+    // Captured, so a drag that leaves the viewport keeps coming here.
+    viewport.setPointerCapture(e.pointerId);
+    pointer("down", e);
+    e.preventDefault();
+  });
+  viewport.addEventListener("pointermove", (e) => {
+    // A pen's samples between two frames (getCoalescedEvents), in order, so a
+    // stroke keeps every point the tablet gave.
+    const samples = e.buttons && e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    if (samples.length > 1) for (const sample of samples) pointer("move", sample);
+    else pointer("move", e);
+  });
+  viewport.addEventListener("pointerup", (e) => pointer("up", e));
+  viewport.addEventListener("pointercancel", (e) => pointer("cancel", e));
+  viewport.addEventListener("pointerleave", (e) => { if (!e.buttons) pointer("leave", e); });
+  // The middle button's auto-scroll would fight the Hand drag.
+  viewport.addEventListener("mousedown", (e) => { if (e.button === 1) e.preventDefault(); });
+  viewport.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // Wheel → `wheel`, deltas in device pixels.
+  viewport.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? rect.height : 1;
+    bridge.send({
+      type: UI.WHEEL,
+      x: (e.clientX - rect.left) * dpr, y: (e.clientY - rect.top) * dpr,
+      dx: e.deltaX * unit * dpr, dy: e.deltaY * unit * dpr,
+      modifiers: modifiersOf(e),
+    });
+  }, { passive: false });
+
+  // Space: Photoshop's temporary Hand, while held (not while typing).
+  const typing = (e) => e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable);
+  const cursor = () => {
+    const hand = spaceHeld || state.tool === "hand";
+    viewport.classList.toggle("tool-hand", hand);
+    viewport.classList.toggle("tool-zoom", !hand && state.tool === "zoom");
+  };
+  window.addEventListener("keydown", (e) => {
+    if (e.code !== "Space" || typing(e)) return;
+    e.preventDefault();
+    if (!spaceHeld) { spaceHeld = true; cursor(); }
+  });
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "Space" && spaceHeld) { spaceHeld = false; cursor(); }
+  });
+  window.addEventListener("blur", () => { spaceHeld = false; cursor(); });
+  on("tool", cursor);
+  cursor();
+
+  // Temporary (W0-T04, until W0-T07 opens real documents): `?pattern` shows
+  // the engine's 4000 × 3000 test pattern, to try pan and zoom.
+  if (new URLSearchParams(location.search).has("pattern")) {
+    bridge.send({ type: UI.ACTION, id: "debug:test-pattern" });
+  }
 }
 
 /* ------------------------------------------------------------- disegno */
