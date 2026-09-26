@@ -1,7 +1,9 @@
 import { Navigation } from "./navigation";
 import { ENGINE, UI, isUiLocalAction } from "./protocol";
 import type { DocId, EngineFrame, EngineToUi, Rgba16, UiToEngine } from "./protocol";
-import { TEST_PATTERN, drawTestPattern } from "./test-pattern";
+import { canvasSurfaces } from "../core/raster/canvas-surface";
+import { composite } from "./compositor";
+import { buildTestDocument } from "./test-pattern";
 import { View } from "./view";
 import { Viewport } from "./viewport";
 import type { FrameScheduler, ViewportTarget } from "./viewport";
@@ -185,12 +187,13 @@ export class Engine {
 		this.notImplemented(id);
 	}
 
-	/** Show the temporary 4000 × 3000 test pattern (W0-T04, until W0-T07 opens real documents). */
+	/** Show the temporary 4000 × 3000 test document (W0-T04 / T06, until W0-T07 opens real documents). */
 	private showTestPattern(): void {
+		const doc = buildTestDocument(canvasSurfaces);
 		this.shown = {
 			doc: 0,
-			view: new View(TEST_PATTERN.width, TEST_PATTERN.height, this.viewport.width, this.viewport.height),
-			draw: drawTestPattern,
+			view: new View(doc.width, doc.height, this.viewport.width, this.viewport.height),
+			draw: (target, view) => composite(target, doc, view),
 		};
 		this.viewChanged(true);
 	}
