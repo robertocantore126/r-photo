@@ -21,7 +21,6 @@
 export const UI = Object.freeze({
 	HELLO: "hello",
 	DIRECT_INPUT: "direct_input",
-	VIEWPORT_BOUNDS: "viewport_bounds",
 	ACTION: "action",
 	COMMAND: "command",
 	UNDO: "undo",
@@ -37,6 +36,12 @@ export const UI = Object.freeze({
 	TOOL_OPTIONS: "tool_options",
 	SET_COLORS: "set_colors",
 	KEY: "key",
+	// R-photo's own (ARCHITECTURE.md §2): there is no native shell to handle
+	// the viewport, so its canvas and its input go to the engine (W0-T04).
+	VIEWPORT_CANVAS: "viewport_canvas",
+	VIEWPORT_RESIZED: "viewport_resized",
+	POINTER: "pointer",
+	WHEEL: "wheel",
 } as const);
 
 /** Engine → UI message type names (Fotox's `EngineToUi`). */
@@ -108,15 +113,6 @@ export interface HelloMessage {
 export interface DirectInputMessage {
 	type: typeof UI.DIRECT_INPUT;
 	enabled: boolean;
-}
-
-/** Where the viewport is, in physical window pixels. CEF's; the worker ignores it (W0-T04 has `viewport_resized`). */
-export interface ViewportBoundsMessage {
-	type: typeof UI.VIEWPORT_BOUNDS;
-	x: number;
-	y: number;
-	width: number;
-	height: number;
 }
 
 /**
@@ -235,11 +231,83 @@ export interface KeyMessage {
 	key: string;
 }
 
+/**
+ * The viewport's canvas, transferred to the engine
+ * (`canvas.transferControlToOffscreen()`), which draws into it from then on.
+ * Sizes are in **device** pixels, so the canvas stays sharp at 125 / 150 %
+ * Windows scaling.
+ */
+export interface ViewportCanvasMessage {
+	type: typeof UI.VIEWPORT_CANVAS;
+	canvas: OffscreenCanvas;
+	width: number;
+	height: number;
+	/** `devicePixelRatio`: device pixels per CSS pixel. */
+	dpr: number;
+	/** The workspace's CSS background, painted where there is no document. */
+	background: string;
+}
+
+/** The viewport changed size, or moved to a screen with another scale. Device pixels. */
+export interface ViewportResizedMessage {
+	type: typeof UI.VIEWPORT_RESIZED;
+	width: number;
+	height: number;
+	dpr: number;
+}
+
+/** Keys held with a pointer or wheel event. `space` is Photoshop's temporary Hand. */
+export interface Modifiers {
+	shift: boolean;
+	ctrl: boolean;
+	alt: boolean;
+	meta: boolean;
+	space: boolean;
+}
+
+/**
+ * A Pointer Event over the viewport. `x`, `y` are **device** pixels from the
+ * viewport's top-left corner. A pen's coalesced samples arrive as one
+ * `move` each, in order. `button` is the button that changed (`down`, `up`;
+ * 0 left, 1 middle, 2 right), `buttons` the ones held (the DOM's bit mask).
+ */
+export interface PointerMessage {
+	type: typeof UI.POINTER;
+	kind: "down" | "move" | "up" | "cancel" | "leave";
+	x: number;
+	y: number;
+	/** 0‥1; a mouse reports 0.5 while a button is down. */
+	pressure: number;
+	/** Degrees, −90‥90. */
+	tilt_x: number;
+	/** Degrees, −90‥90. */
+	tilt_y: number;
+	button: number;
+	buttons: number;
+	pointer_type: "mouse" | "pen" | "touch" | string;
+	modifiers: Modifiers;
+	/** `event.timeStamp`, milliseconds. */
+	time: number;
+}
+
+/**
+ * A wheel event over the viewport (a trackpad pinch arrives as Ctrl + wheel).
+ * `x`, `y` are device pixels from the viewport's top-left; `dx`, `dy` are
+ * the deltas in device pixels (line and page deltas converted).
+ */
+export interface WheelMessage {
+	type: typeof UI.WHEEL;
+	x: number;
+	y: number;
+	dx: number;
+	dy: number;
+	modifiers: Modifiers;
+}
+
 /** Everything the interface sends the engine. */
 export type UiToEngine =
 	| HelloMessage
 	| DirectInputMessage
-	| ViewportBoundsMessage
 	| ActionMessage
 	| CommandMessage
 	| UndoMessage
@@ -254,7 +322,11 @@ export type UiToEngine =
 	| RequestThumbnailsMessage
 	| ToolOptionsMessage
 	| SetColorsMessage
-	| KeyMessage;
+	| KeyMessage
+	| ViewportCanvasMessage
+	| ViewportResizedMessage
+	| PointerMessage
+	| WheelMessage;
 
 /* ------------------------------------------------------------ engine → UI */
 
