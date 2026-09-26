@@ -5,12 +5,12 @@ file that stays recognisably theirs keeps its copyright header, taken verbatim
 from that project's `LICENSE` (the line is copied when the first file is
 ported, so it is never guessed here).
 
-Nothing is vendored yet: W0-T01 is the empty repository. This file is the list
-the cards add to.
+Nothing is vendored yet (W0-T05 took one pattern, no file: see BitMappery's
+row). This file is the list the cards add to.
 
 | Project | Licence | What is taken | Entered |
 | --- | --- | --- | --- |
-| [BitMappery](https://github.com/igorski/bitmappery) | MIT | The document and layer model, the undo actions, and the starting point of the core's types (`src/model/types/*.ts`, `src/model/factories/document-factory.ts`, `layer-factory.ts`). Its Vue/Vuex interface is **not** used. | W0-T05 |
+| [BitMappery](https://github.com/igorski/bitmappery) | MIT | Planned: the document and layer model, the undo actions, and the starting point of the core's types (`src/model/types/*.ts`, `src/model/factories/document-factory.ts`, `layer-factory.ts`). Its Vue/Vuex interface is **not** used. **Taken in W0-T05: only the factories' shape** (`create` with every default spelled out, a counter for ids), credited in `src/core/layer.ts` and `document.ts`. Its types hold `HTMLCanvasElement`s and a flat layer list, so the fields are Fotox's (`ARCHITECTURE.md` §4) and no file is recognisably BitMappery's: no header travels yet. | W0-T05 |
 | [Klecks](https://github.com/Giwayume/klecks) | MIT | The brush engine, as the reference our brushes are ported from. | W2 |
 | [miniPaint](https://github.com/viliusle/miniPaint) | MIT | Filter and tool algorithms, ported to TypeScript when a card needs them. | W2, W4 |
 | [ag-psd](https://github.com/Agamnentzar/ag-psd) | MIT | PSD / PSB read and write, as a dependency (not copied). | W3 |

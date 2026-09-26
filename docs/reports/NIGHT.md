@@ -18,7 +18,8 @@ is the current one.
 | W0-T01 | done before tonight (earlier session); PR opened tonight so the stack can be merged in order | `task/W0-T01-repository` | [#1](https://github.com/robertocantore126/r-photo/pull/1) | `docs/reports/W0-T01.md` |
 | W0-T02 | **done** | `task/W0-T02-interface` | [#2](https://github.com/robertocantore126/r-photo/pull/2) | `docs/reports/W0-T02.md` |
 | W0-T03 | **done** | `task/W0-T03-worker` | [#3](https://github.com/robertocantore126/r-photo/pull/3) | `docs/reports/W0-T03.md` |
-| W0-T04 | **done** | `task/W0-T04-viewport` | see GitHub | `docs/reports/W0-T04.md` |
+| W0-T04 | **done** | `task/W0-T04-viewport` | [#4](https://github.com/robertocantore126/r-photo/pull/4) | `docs/reports/W0-T04.md` |
+| W0-T05 | **done** | `task/W0-T05-core` | see GitHub | `docs/reports/W0-T05.md` |
 
 ## What limited the checks
 
@@ -50,7 +51,13 @@ is the current one.
    *Options*: rename now in a small card of its own; rename when the demo
    document is removed (W0-T07 replaces it with real documents); keep it.
    *Recommendation*: a small card after W0, strings only.
-3. **When does a JavaScript file of `ui/` move to TypeScript?** `AGENTS.md`
+3. **BitMappery's header.** W0-T05 took only the shape of BitMappery's
+   factories (its model is not the one `ARCHITECTURE.md` §4 asks for), so no
+   MIT header was added. *Options*: leave it (credit in comments and
+   `THIRD_PARTY.md`); add BitMappery's header to `src/core/layer.ts` and
+   `document.ts`. *Recommendation*: leave it; add the header the day a file
+   is actually ported.
+4. **When does a JavaScript file of `ui/` move to TypeScript?** `AGENTS.md`
    says "when a card touches it"; the cards themselves list files such as
    `ui/js/canvas.js` and `ui/js/native/bridge.js` as `.js`, and W1-T03 says
    "moved to TS" explicitly where it means it. Tonight a file moved only when
