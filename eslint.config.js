@@ -8,6 +8,10 @@ import tseslint from "typescript-eslint";
  * engine draws into. Everything else reads and writes pixels through the
  * `Surface` interface, which is what keeps W10 (tiles, 16-bit, OPFS) from
  * touching the tools and the filters.
+ *
+ * It guards `src/` only. Fotox's interface (`ui/`) is presentation: it draws
+ * the thumbnails and previews the engine sends it into its own small canvases,
+ * and it holds no layer's pixels (W0-T02).
  */
 const CANVAS_FILES = ["src/core/raster/**", "src/engine/viewport.ts"];
 
@@ -36,24 +40,33 @@ export default tseslint.config(
 		ignores: ["dist/**", "node_modules/**", "coverage/**", "**/*.min.js"],
 	},
 
-	js.configs.recommended,
-	...tseslint.configs.recommended,
-
-	/* Fotox's interface: plain JavaScript modules in the browser (and the
-	   build scripts, which are Node). */
+	/* JavaScript: Fotox's interface, copied as it is (W0-T02), and the build
+	   scripts, which are Node. The file stays JavaScript until a card touches
+	   it (ROADMAP §5 question 4). */
 	{
 		files: ["**/*.js", "**/*.mjs"],
+		extends: [js.configs.recommended],
 		languageOptions: {
 			ecmaVersion: 2023,
 			sourceType: "module",
 			globals: { ...globals.browser, ...globals.node },
 		},
+		rules: {
+			// `case A: case B:` with nothing in between is a normal way to group
+			// cases, and the interface uses it.
+			"no-fallthrough": ["error", { allowEmptyCase: true }],
+			// Fotox's interface is a verbatim copy: it is not tidied here, so
+			// the unused locals it carries are fixed when a card rewrites the
+			// file (W0-T02, "Remove nothing yet").
+			"no-unused-vars": "off",
+		},
 	},
 
-	/* TypeScript: the recommended set, plus the type-aware rules that pay for
+	/* TypeScript: the recommended set plus the type-aware rules that pay for
 	   themselves (the card's "strict type-checked where cheap"). */
 	{
 		files: ["**/*.ts"],
+		extends: [...tseslint.configs.recommended],
 		languageOptions: {
 			ecmaVersion: 2023,
 			sourceType: "module",
@@ -63,6 +76,7 @@ export default tseslint.config(
 			},
 		},
 		rules: {
+			"no-fallthrough": ["error", { allowEmptyCase: true }],
 			"@typescript-eslint/consistent-type-imports": "error",
 			"@typescript-eslint/no-floating-promises": "error",
 			"@typescript-eslint/no-misused-promises": "error",
@@ -70,13 +84,13 @@ export default tseslint.config(
 			"@typescript-eslint/switch-exhaustiveness-check": "error",
 			// The card's rule: no `any` without a comment saying why.
 			"@typescript-eslint/no-explicit-any": "warn",
-			"no-console": "off",
 		},
 	},
 
-	/* The Surface rule, everywhere but the two places it is allowed. */
+	/* The Surface rule, everywhere under `src/` but the two places it is
+	   allowed. */
 	{
-		files: ["src/**/*.ts", "ui/**/*.js"],
+		files: ["src/**/*.ts"],
 		ignores: CANVAS_FILES,
 		rules: {
 			"no-restricted-globals": ["error", ...CANVAS_GLOBALS],
